@@ -17,7 +17,8 @@ type WSClient struct {
 	mutex      sync.Mutex
 	token      string
 	deviceType string
-	done       chan struct{} // 用于控制接收消息的goroutine
+	done       chan struct{}
+	onMessage  func(message string) // 添加消息回调函数
 }
 
 // NewWSClient 创建新的WebSocket客户端
@@ -57,6 +58,11 @@ func (c *WSClient) Connect() error {
 	return nil
 }
 
+// SetMessageCallback 设置消息回调
+func (c *WSClient) SetMessageCallback(callback func(message string)) {
+	c.onMessage = callback
+}
+
 // receiveMessages 接收服务端消息
 func (c *WSClient) receiveMessages() {
 	for {
@@ -69,7 +75,9 @@ func (c *WSClient) receiveMessages() {
 				log.Printf("读取消息错误: %v", err)
 				return
 			}
-			log.Printf("收到服务端消息: %s", string(message))
+			if c.onMessage != nil {
+				c.onMessage(string(message))
+			}
 		}
 	}
 }
