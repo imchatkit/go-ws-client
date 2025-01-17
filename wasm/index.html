@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>WebSocket WASM Demo</title>
+    <script src="wasm_exec.js"></script>
+    <script>
+        // 初始化 WASM
+        const go = new Go();
+        WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
+            go.run(result.instance);
+        });
+
+        // 消息回调函数
+        window.onWsMessage = function(message) {
+            console.log("Received message:", message);
+            document.getElementById('messages').innerHTML += `<div>${message}</div>`;
+        };
+
+        // 状态变更回调
+        window.onStateChange = function(state) {
+            const states = ["已断开", "正在连接", "已连接", "重连中"];
+            document.getElementById('status').textContent = states[state] || "未知状态";
+        };
+
+        // 等待 DOM 加载完成
+        document.addEventListener('DOMContentLoaded', () => {
+            // 绑定按钮事件
+            window.connect = () => {
+                const url = document.getElementById('url').value;
+                const token = document.getElementById('token').value;
+                const deviceType = document.getElementById('deviceType').value;
+                wsConnect(url, token, deviceType);
+            };
+
+            window.disconnect = () => {
+                wsClose();
+            };
+
+            window.sendMessage = () => {
+                const message = document.getElementById('message').value;
+                if (wsSend(message)) {
+                    console.log("消息发送成功");
+                    document.getElementById('message').value = '';
+                } else {
+                    console.log("消息发送失败");
+                }
+            };
+        });
+    </script>
+    <style>
+        .container { margin: 20px; }
+        .form-group { margin: 10px 0; }
+        #messages { 
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            min-height: 100px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        #status {
+            font-weight: bold;
+            margin: 10px 0;
+            color: #666;
+        }
+        button {
+            padding: 5px 10px;
+            margin-right: 5px;
+        }
+        input {
+            padding: 5px;
+        }
+        .message {
+            margin: 5px 0;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebSocket WASM 演示</h1>
+        <div class="form-group">
+            <label>URL:</label>
+            <input type="text" id="url" value="ws://127.0.0.1:9688/ws" size="40"/>
+        </div>
+        <div class="form-group">
+            <label>Token:</label>
+            <input type="text" id="token" value="Bearer your-token-here" size="40"/>
+        </div>
+        <div class="form-group">
+            <label>设备类型:</label>
+            <input type="text" id="deviceType" value="wasm"/>
+        </div>
+        <div class="form-group">
+            <button onclick="connect()">连接</button>
+            <button onclick="disconnect()">断开</button>
+        </div>
+        <div id="status">未连接</div>
+        <div class="form-group">
+            <input type="text" id="message" placeholder="请输入消息" size="40"/>
+            <button onclick="sendMessage()">发送</button>
+        </div>
+        <div id="messages"></div>
+    </div>
+</body>
+</html>

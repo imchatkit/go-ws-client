@@ -57,22 +57,44 @@ func (c *WSClient) Connect() error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	// 添加请求头
+	// 添加调试日志
+	fmt.Printf("Connecting to URL: %s\n", c.url)
+	fmt.Printf("Headers - Token: %s, DeviceType: %s\n", c.token, c.deviceType)
+
+	// 设置连接选项
+	dialer := websocket.Dialer{
+		HandshakeTimeout: 3 * time.Second,
+		// 添加这些选项以支持 WASM 环境
+		EnableCompression: true,
+		Proxy:             http.ProxyFromEnvironment,
+		// 禁用 TLS 验证（仅用于测试）
+		TLSClientConfig: nil,
+	}
+
+	// 设置请求头
 	header := http.Header{}
 	header.Add("token", c.token)
 	header.Add("deviceType", c.deviceType)
+	// 添加其他可能需要的头部
+	header.Add("Origin", "http://localhost:8080")
+	header.Add("User-Agent", "Mozilla/5.0 (WASM)")
 
-	// 设置连接超时
-	dialer := websocket.Dialer{
-		HandshakeTimeout: 3 * time.Second,
-	}
-
-	conn, _, err := dialer.Dial(c.url, header)
+	// 尝试连接
+	fmt.Println("Attempting WebSocket connection...")
+	conn, resp, err := dialer.Dial(c.url, header)
 	if err != nil {
+		if resp != nil {
+			fmt.Printf("Connection failed with status: %d\n", resp.StatusCode)
+			// 打印响应头
+			for k, v := range resp.Header {
+				fmt.Printf("Response Header - %s: %v\n", k, v)
+			}
+		}
 		return fmt.Errorf("连接超时或失败 (3秒超时): %v", err)
 	}
 
 	c.conn = conn
+	fmt.Println("WebSocket connection established successfully")
 
 	// 启动心跳
 	c.startPing()
