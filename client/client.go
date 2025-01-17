@@ -1,23 +1,32 @@
 package client
 
 import (
+	"fmt"
+	"log"
+	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
 
 // WSClient WebSocket客户端结构体
 type WSClient struct {
-	conn  *websocket.Conn
-	url   string
-	mutex sync.Mutex
-	// 可以根据需要添加更多字段
+	conn       *websocket.Conn
+	url        string
+	mutex      sync.Mutex
+	token      string
+	deviceType string
+	done       chan struct{} // 用于控制接收消息的goroutine
 }
 
 // NewWSClient 创建新的WebSocket客户端
-func NewWSClient(url string) *WSClient {
+func NewWSClient(url string, token string, deviceType string) *WSClient {
 	return &WSClient{
-		url: url,
+		url:        url,
+		token:      token,
+		deviceType: deviceType,
+		done:       make(chan struct{}),
 	}
 }
 
@@ -26,14 +35,43 @@ func (c *WSClient) Connect() error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	dialer := websocket.Dialer{}
-	conn, _, err := dialer.Dial(c.url, nil)
+	// 添加请求头
+	header := http.Header{}
+	header.Add("token", c.token)
+	header.Add("deviceType", c.deviceType)
+
+	// 设置连接超时
+	dialer := websocket.Dialer{
+		HandshakeTimeout: 3 * time.Second,
+	}
+
+	conn, _, err := dialer.Dial(c.url, header)
 	if err != nil {
-		return err
+		return fmt.Errorf("连接超时或失败 (3秒超时): %v", err)
 	}
 
 	c.conn = conn
+
+	// 启动消息接收goroutine
+	go c.receiveMessages()
 	return nil
+}
+
+// receiveMessages 接收服务端消息
+func (c *WSClient) receiveMessages() {
+	for {
+		select {
+		case <-c.done:
+			return
+		default:
+			_, message, err := c.conn.ReadMessage()
+			if err != nil {
+				log.Printf("读取消息错误: %v", err)
+				return
+			}
+			log.Printf("收到服务端消息: %s", string(message))
+		}
+	}
 }
 
 // Close 关闭连接
@@ -41,6 +79,7 @@ func (c *WSClient) Close() error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
+	close(c.done) // 通知接收goroutine退出
 	if c.conn != nil {
 		return c.conn.Close()
 	}
