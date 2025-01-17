@@ -2,7 +2,6 @@ package main
 
 /*
 #include <stdlib.h>
-typedef int int32_t;
 typedef void (*MessageCallback)(char*);
 
 static void invokeCallback(MessageCallback callback, char* message) {
@@ -24,18 +23,6 @@ var (
 	messageCallback C.MessageCallback
 )
 
-//export SetMessageCallback
-func SetMessageCallback(callback C.MessageCallback) {
-	messageCallback = callback
-	if globalClient != nil {
-		globalClient.SetMessageCallback(func(message string) {
-			cMessage := C.CString(message)
-			C.invokeCallback(messageCallback, cMessage)
-			C.free(unsafe.Pointer(cMessage))
-		})
-	}
-}
-
 //export InitWebSocket
 func InitWebSocket(url, token, deviceType *C.char) C.int {
 	urlStr := C.GoString(url)
@@ -44,7 +31,7 @@ func InitWebSocket(url, token, deviceType *C.char) C.int {
 
 	globalClient = client.NewWSClient(urlStr, tokenStr, deviceTypeStr)
 
-	// 设置消息回调
+	// 如果有回调，设置它
 	if messageCallback != nil {
 		globalClient.SetMessageCallback(func(message string) {
 			cMessage := C.CString(message)
@@ -87,6 +74,18 @@ func CloseWebSocket() C.int {
 		return C.int(0)
 	}
 	return C.int(1)
+}
+
+//export SetMessageCallback
+func SetMessageCallback(callback C.MessageCallback) {
+	messageCallback = callback
+	if globalClient != nil {
+		globalClient.SetMessageCallback(func(message string) {
+			cMessage := C.CString(message)
+			C.invokeCallback(messageCallback, cMessage)
+			C.free(unsafe.Pointer(cMessage))
+		})
+	}
 }
 
 func main() {}
