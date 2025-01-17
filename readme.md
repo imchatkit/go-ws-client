@@ -1,0 +1,4 @@
+这是一个golang语言的websocket连接器
+用于向服务端发送websocket请求和接收服务端返回的websocket响应
+数据传输使用protobuf协议
+go version go1.23.1 windows/amd64
