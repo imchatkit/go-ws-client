@@ -3,13 +3,38 @@ package main
 /*
 #include <stdlib.h>
 typedef int int32_t;
+typedef void (*MessageCallback)(char*);
+
+static void invokeCallback(MessageCallback callback, char* message) {
+    if (callback != NULL) {
+        callback(message);
+    }
+}
 */
 import "C"
 import (
+	"fmt"
+	"unsafe"
+
 	"github.com/imai/go-ws-client/client"
 )
 
-var globalClient *client.WSClient
+var (
+	globalClient    *client.WSClient
+	messageCallback C.MessageCallback
+)
+
+//export SetMessageCallback
+func SetMessageCallback(callback C.MessageCallback) {
+	messageCallback = callback
+	if globalClient != nil {
+		globalClient.SetMessageCallback(func(message string) {
+			cMessage := C.CString(message)
+			C.invokeCallback(messageCallback, cMessage)
+			C.free(unsafe.Pointer(cMessage))
+		})
+	}
+}
 
 //export InitWebSocket
 func InitWebSocket(url, token, deviceType *C.char) C.int {
@@ -18,7 +43,18 @@ func InitWebSocket(url, token, deviceType *C.char) C.int {
 	deviceTypeStr := C.GoString(deviceType)
 
 	globalClient = client.NewWSClient(urlStr, tokenStr, deviceTypeStr)
+
+	// 设置消息回调
+	if messageCallback != nil {
+		globalClient.SetMessageCallback(func(message string) {
+			cMessage := C.CString(message)
+			C.invokeCallback(messageCallback, cMessage)
+			C.free(unsafe.Pointer(cMessage))
+		})
+	}
+
 	err := globalClient.Connect()
+	fmt.Println("InitWebSocket", err)
 	if err != nil {
 		return C.int(0)
 	}

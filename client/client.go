@@ -19,6 +19,7 @@ type WSClient struct {
 	deviceType string
 	done       chan struct{}
 	onMessage  func(message string) // 添加消息回调函数
+	stopPing   chan struct{}        // 用于停止心跳的通道
 }
 
 // NewWSClient 创建新的WebSocket客户端
@@ -28,7 +29,27 @@ func NewWSClient(url string, token string, deviceType string) *WSClient {
 		token:      token,
 		deviceType: deviceType,
 		done:       make(chan struct{}),
+		stopPing:   make(chan struct{}), // 初始化心跳停止通道
 	}
+}
+
+// startPing 开始发送心跳
+func (c *WSClient) startPing() {
+	ticker := time.NewTicker(20 * time.Second)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				err := c.Send("ping")
+				if err != nil {
+					log.Printf("心跳发送失败: %v", err)
+				}
+			case <-c.stopPing:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
 }
 
 // Connect 连接到WebSocket服务器
@@ -52,6 +73,9 @@ func (c *WSClient) Connect() error {
 	}
 
 	c.conn = conn
+
+	// 启动心跳
+	c.startPing()
 
 	// 启动消息接收goroutine
 	go c.receiveMessages()
@@ -87,7 +111,12 @@ func (c *WSClient) Close() error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	close(c.done) // 通知接收goroutine退出
+	// 停止心跳
+	close(c.stopPing)
+
+	// 关闭消息接收
+	close(c.done)
+
 	if c.conn != nil {
 		return c.conn.Close()
 	}
