@@ -2,3 +2,7 @@ libwsclient.dll
 libwsclient.h
 wasm/main.wasm
 wasm/wasm_exec.js
+web-client/dist/**
+web-client/node_modules/**
+web-client/node_modules
+web-client/node_modules/.bin/**

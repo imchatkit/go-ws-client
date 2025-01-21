@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>WebSocket TypeScript 演示</title>
+    <script src="dist/bundle.js"></script>
+    <style>
+        .container { 
+            margin: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group { 
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        .form-group label {
+            width: 100px;
+            text-align: right;
+            margin-right: 10px;
+        }
+        #messages { 
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-height: 100px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: #f9f9f9;
+        }
+        #status {
+            font-weight: bold;
+            margin: 10px 0;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        .connected {
+            color: #2ecc71;
+            background: #eafaf1;
+        }
+        .disconnected {
+            color: #e74c3c;
+            background: #fdedec;
+        }
+        button {
+            padding: 8px 15px;
+            margin-right: 5px;
+            border: none;
+            border-radius: 4px;
+            background: #3498db;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 400px;
+        }
+        .message {
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 4px;
+            background: white;
+            border-left: 4px solid #3498db;
+        }
+        .message.sent {
+            border-left-color: #2ecc71;
+            background: #f8f9fa;
+        }
+        .message.auth_response {
+            border-left-color: #f1c40f;
+            background: #fef9e7;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebSocket TypeScript 演示</h1>
+        <div class="form-group">
+            <label>服务地址:</label>
+            <input type="text" id="url" value="ws://127.0.0.1:9688/ws" size="40"/>
+        </div>
+        <div class="form-group">
+            <label>Token:</label>
+            <input type="text" id="token" value="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJpbV91c2VyOjM5ODEyMDM2NDM0MDE3OCIsInJuU3RyIjoiaUFqQkhQM09RV21ZQklmS0xYeDBBYTZjdmdHb2ZISngiLCJ1c2VySWQiOjM5ODEyMDM2NDM0MDE3OCwidXNlck5hbWUiOiLoqIDpnZnmgKEifQ.jXStT5wSzYvcCHy4PKLGeskhNxNd3Nx-xrVmh0Yaz98" size="40"/>
+        </div>
+        <div class="form-group">
+            <label>设备类型:</label>
+            <input type="text" id="deviceType" value="im_app_android" readonly/>
+        </div>
+        <div class="form-group">
+            <label></label>
+            <div>
+                <button onclick="window.app.connect()">连接</button>
+                <button onclick="window.app.disconnect()">断开</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>连接状态:</label>
+            <div id="status" class="disconnected">未连接</div>
+        </div>
+        <div class="form-group">
+            <label>发送消息:</label>
+            <div style="flex: 1;">
+                <input type="text" id="message" placeholder="请输入消息内容，回车发送" size="40"/>
+                <button onclick="window.app.sendMessage()">发送</button>
+            </div>
+        </div>
+        <div id="messages"></div>
+    </div>
+</body>
+</html> 
