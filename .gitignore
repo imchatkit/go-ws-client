@@ -1,3 +1,4 @@
 libwsclient.dll
 libwsclient.h
 wasm/main.wasm
+wasm/wasm_exec.js
