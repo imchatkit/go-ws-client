@@ -1,2 +1,3 @@
 libwsclient.dll
 libwsclient.h
+wasm/main.wasm

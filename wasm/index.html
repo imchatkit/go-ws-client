@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8"/>
-    <title>WebSocket WASM Demo</title>
+    <title>WebSocket WASM 演示</title>
     <script src="wasm_exec.js"></script>
     <script>
         // 初始化 WASM
@@ -13,14 +13,32 @@
 
         // 消息回调函数
         window.onWsMessage = function(message) {
-            console.log("Received message:", message);
-            document.getElementById('messages').innerHTML += `<div>${message}</div>`;
+            console.log("收到消息:", message);
+            try {
+                // 尝试解析 JSON
+                const msgObj = JSON.parse(message);
+                let displayMsg = '';
+                
+                // 根据消息类型显示不同的内容
+                if (msgObj.type === 'auth_response') {
+                    displayMsg = `认证${msgObj.success ? '成功' : '失败'}: ${msgObj.message || ''}`;
+                } else {
+                    displayMsg = message;
+                }
+                
+                document.getElementById('messages').innerHTML += `<div class="message ${msgObj.type}">${displayMsg}</div>`;
+            } catch (e) {
+                // 如果不是 JSON，直接显示原始消息
+                document.getElementById('messages').innerHTML += `<div class="message">${message}</div>`;
+            }
         };
 
         // 状态变更回调
         window.onStateChange = function(state) {
             const states = ["已断开", "正在连接", "已连接", "重连中"];
-            document.getElementById('status').textContent = states[state] || "未知状态";
+            const status = document.getElementById('status');
+            status.textContent = states[state] || "未知状态";
+            status.className = state === 2 ? 'connected' : 'disconnected';
         };
 
         // 等待 DOM 加载完成
@@ -30,6 +48,10 @@
                 const url = document.getElementById('url').value;
                 const token = document.getElementById('token').value;
                 const deviceType = document.getElementById('deviceType').value;
+                
+                // 清空消息区域
+                document.getElementById('messages').innerHTML = '';
+                
                 wsConnect(url, token, deviceType);
             };
 
@@ -38,43 +60,110 @@
             };
 
             window.sendMessage = () => {
-                const message = document.getElementById('message').value;
+                const messageInput = document.getElementById('message');
+                const message = messageInput.value;
+                if (!message.trim()) {
+                    alert('请输入消息内容');
+                    return;
+                }
+                
                 if (wsSend(message)) {
                     console.log("消息发送成功");
-                    document.getElementById('message').value = '';
+                    messageInput.value = '';
+                    // 添加发送的消息到消息区域
+                    document.getElementById('messages').innerHTML += `<div class="message sent">发送: ${message}</div>`;
                 } else {
                     console.log("消息发送失败");
+                    alert('发送失败，请检查连接状态');
                 }
             };
+
+            // 添加回车发送功能
+            document.getElementById('message').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    window.sendMessage();
+                }
+            });
         });
     </script>
     <style>
-        .container { margin: 20px; }
-        .form-group { margin: 10px 0; }
+        .container { 
+            margin: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group { 
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        .form-group label {
+            width: 100px;
+            text-align: right;
+            margin-right: 10px;
+        }
         #messages { 
             margin-top: 20px;
             padding: 10px;
             border: 1px solid #ccc;
+            border-radius: 4px;
             min-height: 100px;
-            max-height: 300px;
+            max-height: 400px;
             overflow-y: auto;
+            background: #f9f9f9;
         }
         #status {
             font-weight: bold;
             margin: 10px 0;
-            color: #666;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        .connected {
+            color: #2ecc71;
+            background: #eafaf1;
+        }
+        .disconnected {
+            color: #e74c3c;
+            background: #fdedec;
         }
         button {
-            padding: 5px 10px;
+            padding: 8px 15px;
             margin-right: 5px;
+            border: none;
+            border-radius: 4px;
+            background: #3498db;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #2980b9;
         }
         input {
-            padding: 5px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 400px;
         }
         .message {
             margin: 5px 0;
-            padding: 5px;
-            border-bottom: 1px solid #eee;
+            padding: 8px;
+            border-radius: 4px;
+            background: white;
+            border-left: 4px solid #3498db;
+        }
+        .message.sent {
+            border-left-color: #2ecc71;
+            background: #f8f9fa;
+        }
+        .message.auth_response {
+            border-left-color: #f1c40f;
+            background: #fef9e7;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
         }
     </style>
 </head>
@@ -82,25 +171,34 @@
     <div class="container">
         <h1>WebSocket WASM 演示</h1>
         <div class="form-group">
-            <label>URL:</label>
+            <label>服务地址:</label>
             <input type="text" id="url" value="ws://127.0.0.1:9688/ws" size="40"/>
         </div>
         <div class="form-group">
             <label>Token:</label>
-            <input type="text" id="token" value="Bearer your-token-here" size="40"/>
+            <input type="text" id="token" value="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJpbV91c2VyOjM5ODEyMDM2NDM0MDE3OCIsInJuU3RyIjoiaUFqQkhQM09RV21ZQklmS0xYeDBBYTZjdmdHb2ZISngiLCJ1c2VySWQiOjM5ODEyMDM2NDM0MDE3OCwidXNlck5hbWUiOiLoqIDpnZnmgKEifQ.jXStT5wSzYvcCHy4PKLGeskhNxNd3Nx-xrVmh0Yaz98" size="40"/>
         </div>
         <div class="form-group">
             <label>设备类型:</label>
-            <input type="text" id="deviceType" value="wasm"/>
+            <input type="text" id="deviceType" value="im_app_android" readonly/>
         </div>
         <div class="form-group">
-            <button onclick="connect()">连接</button>
-            <button onclick="disconnect()">断开</button>
+            <label></label>
+            <div>
+                <button onclick="connect()">连接</button>
+                <button onclick="disconnect()">断开</button>
+            </div>
         </div>
-        <div id="status">未连接</div>
         <div class="form-group">
-            <input type="text" id="message" placeholder="请输入消息" size="40"/>
-            <button onclick="sendMessage()">发送</button>
+            <label>连接状态:</label>
+            <div id="status" class="disconnected">未连接</div>
+        </div>
+        <div class="form-group">
+            <label>发送消息:</label>
+            <div style="flex: 1;">
+                <input type="text" id="message" placeholder="请输入消息内容，回车发送" size="40"/>
+                <button onclick="sendMessage()">发送</button>
+            </div>
         </div>
         <div id="messages"></div>
     </div>

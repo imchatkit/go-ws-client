@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"syscall/js"
 	"time"
@@ -64,6 +65,15 @@ func (w *WSBrowser) Connect(url, token, deviceType string) bool {
 }
 
 func (w *WSBrowser) setupWebSocket(url, token, deviceType string) {
+	// 添加 token 和 deviceType 到 URL 参数
+	if !strings.Contains(url, "?") {
+		url += "?"
+	} else {
+		url += "&"
+	}
+	url += fmt.Sprintf("token=%s&deviceType=im_app_android", token)
+
+	// 创建 WebSocket 连接
 	w.ws = js.Global().Get("WebSocket").New(url)
 
 	w.onOpen = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
@@ -99,10 +109,6 @@ func (w *WSBrowser) setupWebSocket(url, token, deviceType string) {
 	w.ws.Set("onmessage", w.onMessage)
 	w.ws.Set("onerror", w.onError)
 	w.ws.Set("onclose", w.onClose)
-
-	// 设置请求头（通过URL参数）
-	w.ws.Set("token", token)
-	w.ws.Set("deviceType", deviceType)
 }
 
 func (w *WSBrowser) setState(state IMClientState) {
